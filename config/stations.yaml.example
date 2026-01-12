@@ -1,0 +1,50 @@
+# Radio Scrobbler Configuration
+# Copy this file to stations.yaml and fill in your Last.fm credentials
+
+stations:
+  - name: fip
+    lastfm_username: twifip
+    lastfm_api_key: YOUR_API_KEY_HERE
+    lastfm_api_secret: YOUR_API_SECRET_HERE
+    lastfm_password_hash: YOUR_PASSWORD_HASH_HERE  # MD5 hash of your Last.fm password
+    # Alternative: use lastfm_password instead (will be hashed automatically)
+    # lastfm_password: YOUR_PASSWORD_HERE
+    poll_interval: 30  # seconds
+    enabled: true
+    
+  - name: superfly
+    lastfm_username: twisuperfly
+    lastfm_api_key: YOUR_API_KEY_HERE
+    lastfm_api_secret: YOUR_API_SECRET_HERE
+    lastfm_password_hash: YOUR_PASSWORD_HASH_HERE
+    poll_interval: 30
+    enabled: true
+    
+  - name: fm4
+    lastfm_username: twifm4
+    lastfm_api_key: YOUR_API_KEY_HERE
+    lastfm_api_secret: YOUR_API_SECRET_HERE
+    lastfm_password_hash: YOUR_PASSWORD_HASH_HERE
+    poll_interval: 30
+    enabled: true
+    
+  - name: kbco
+    lastfm_username: twikbco
+    lastfm_api_key: YOUR_API_KEY_HERE
+    lastfm_api_secret: YOUR_API_SECRET_HERE
+    lastfm_password_hash: YOUR_PASSWORD_HASH_HERE
+    poll_interval: 30
+    enabled: true
+    
+  - name: wnyc
+    lastfm_username: twiwnyc
+    lastfm_api_key: YOUR_API_KEY_HERE
+    lastfm_api_secret: YOUR_API_SECRET_HERE
+    lastfm_password_hash: YOUR_PASSWORD_HASH_HERE
+    poll_interval: 30
+    enabled: true
+
+# You can also use environment variables:
+# lastfm_api_key: ${LASTFM_API_KEY}
+# lastfm_api_secret: ${LASTFM_API_SECRET}
+# lastfm_password_hash: ${LASTFM_PASSWORD_HASH}

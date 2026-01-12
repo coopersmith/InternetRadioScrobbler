@@ -1,0 +1,9 @@
+services:
+  - type: worker
+    name: radio-scrobbler
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python3 main.py -c config/stations.yaml -l INFO --log-file logs/scrobbler.log
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0

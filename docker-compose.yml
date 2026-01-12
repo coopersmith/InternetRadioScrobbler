@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  radio-scrobbler:
+    build: .
+    container_name: radio-scrobbler
+    restart: unless-stopped
+    volumes:
+      - ./config/stations.yaml:/app/config/stations.yaml:ro
+      - ./logs:/app/logs
+    environment:
+      - TZ=UTC
+    # Uncomment and set environment variables if using env var substitution in config
+    # environment:
+    #   - LASTFM_API_KEY=${LASTFM_API_KEY}
+    #   - LASTFM_API_SECRET=${LASTFM_API_SECRET}
+    #   - LASTFM_PASSWORD_HASH=${LASTFM_PASSWORD_HASH}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
