@@ -123,6 +123,8 @@ class BaseStationFetcher(ABC):
                         cells = row.find_all('td')
                         if len(cells) >= 2:
                             first_cell = cells[0].get_text(strip=True)
+                            
+                            # Check for "Live" row first
                             if first_cell.lower() == 'live':
                                 # Get the track info from the second cell
                                 track_cell = cells[1]
@@ -138,8 +140,38 @@ class BaseStationFetcher(ABC):
                                     artist = parts[0].strip()
                                     title = parts[1].strip()
                                     
+                                    # Remove extra info like "| FM4 Musik Podcast"
+                                    if ' | ' in title:
+                                        title = title.split(' | ')[0].strip()
+                                    
                                     if artist and title:
                                         self.logger.debug(f"Found Live track via BeautifulSoup: {artist} - {title}")
+                                        return TrackInfo(
+                                            artist=self.normalize_artist(artist),
+                                            title=self.normalize_title(title)
+                                        )
+                            
+                            # If no "Live" row, use the first row (most recent track)
+                            # Format: "HH:MM | Artist - Title | Extra info"
+                            elif first_cell and ':' in first_cell and len(first_cell) <= 6:  # Looks like a time
+                                track_cell = cells[1]
+                                link = track_cell.find('a')
+                                if link:
+                                    track_text = link.get_text(strip=True)
+                                else:
+                                    track_text = track_cell.get_text(strip=True)
+                                
+                                # Remove extra info like "| FM4 Musik Podcast" or "| FM4 OKFM4"
+                                if ' | ' in track_text:
+                                    track_text = track_text.split(' | ')[0].strip()
+                                
+                                if ' - ' in track_text:
+                                    parts = track_text.split(' - ', 1)
+                                    artist = parts[0].strip()
+                                    title = parts[1].strip()
+                                    
+                                    if artist and title:
+                                        self.logger.debug(f"Found most recent track via BeautifulSoup: {artist} - {title}")
                                         return TrackInfo(
                                             artist=self.normalize_artist(artist),
                                             title=self.normalize_title(title)
