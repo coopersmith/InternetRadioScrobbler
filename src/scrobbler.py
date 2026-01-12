@@ -23,6 +23,7 @@ except ImportError:
     from stations.fm4 import FM4Fetcher
     from stations.kbco import KBCOFetcher
     from stations.wnyc import WNYCFetcher
+    from stations.ness import NessFetcher
 
 logger = logging.getLogger(__name__)
 
