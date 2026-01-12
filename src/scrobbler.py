@@ -33,6 +33,7 @@ STATION_FETCHERS = {
     'fm4': FM4Fetcher,
     'kbco': KBCOFetcher,
     'wnyc': WNYCFetcher,
+    'ness': NessFetcher,
 }
 
 
