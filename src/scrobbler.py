@@ -13,6 +13,7 @@ try:
     from .stations.fm4 import FM4Fetcher
     from .stations.kbco import KBCOFetcher
     from .stations.wnyc import WNYCFetcher
+    from .stations.ness import NessFetcher
 except ImportError:
     # Allow imports when running as a module
     from lastfm_client import LastFMClient
