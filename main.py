@@ -23,8 +23,8 @@ def main():
     )
     parser.add_argument(
         '-c', '--config',
-        default='config/stations.yaml',
-        help='Path to configuration file (default: config/stations.yaml)'
+        default=None,
+        help='Path to configuration file (default: config/stations.yaml or STATIONS_CONFIG env var)'
     )
     parser.add_argument(
         '-l', '--log-level',
