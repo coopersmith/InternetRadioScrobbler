@@ -2,9 +2,7 @@
 """Main entry point for the radio scrobbler service."""
 
 import argparse
-import sys
-from pathlib import Path
-
+import os
 import sys
 from pathlib import Path
 
@@ -48,7 +46,10 @@ def main():
     
     try:
         # Load configuration
-        logger.info(f"Loading configuration from {args.config}")
+        if os.getenv('STATIONS_CONFIG'):
+            logger.info("Loading configuration from STATIONS_CONFIG environment variable")
+        else:
+            logger.info(f"Loading configuration from {args.config or 'config/stations.yaml'}")
         stations = load_config(args.config)
         
         if not stations:
