@@ -14,6 +14,7 @@ try:
     from .stations.kbco import KBCOFetcher
     from .stations.wnyc import WNYCFetcher
     from .stations.ness import NessFetcher
+    from .stations.radionova import RadioNovaFetcher
 except ImportError:
     # Allow imports when running as a module
     from lastfm_client import LastFMClient
@@ -24,6 +25,7 @@ except ImportError:
     from stations.kbco import KBCOFetcher
     from stations.wnyc import WNYCFetcher
     from stations.ness import NessFetcher
+    from stations.radionova import RadioNovaFetcher
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +38,7 @@ STATION_FETCHERS = {
     'kbco': KBCOFetcher,
     'wnyc': WNYCFetcher,
     'ness': NessFetcher,
+    'radionova': RadioNovaFetcher,
 }
 
 
