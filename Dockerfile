@@ -13,10 +13,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY src/ ./src/
 COPY main.py .
+COPY web_main.py .
+COPY web_app.py .
 COPY config/ ./config/
+COPY web/ ./web/
 
 # Create directory for logs
 RUN mkdir -p /app/logs
 
-# Run the scrobbler
+# Expose port for web interface (if running in web mode)
+EXPOSE 5000
+
+# Default to running main scrobbler, but can override with web_main.py
 CMD ["python", "main.py"]

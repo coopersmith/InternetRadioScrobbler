@@ -1,0 +1,19 @@
+# Personal Radio Scrobbler Configuration
+# Copy this file to personal_scrobbler.yaml and fill in your Last.fm credentials
+
+# Your personal Last.fm account credentials
+lastfm:
+  username: "your_lastfm_username"
+  api_key: "your_api_key"
+  api_secret: "your_api_secret"
+  password: "your_password"  # Plain text password (will be hashed)
+  # OR use password_hash instead:
+  # password_hash: "md5_hash_of_password"
+
+# Polling interval in seconds (how often to check for new tracks)
+poll_interval: 30
+
+# Web server configuration
+server:
+  host: "0.0.0.0"  # Listen on all interfaces
+  port: 5000

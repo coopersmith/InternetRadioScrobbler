@@ -14,6 +14,7 @@ build/
 
 # Configuration (contains secrets)
 config/stations.yaml
+config/personal_scrobbler.yaml
 .env
 
 # Logs

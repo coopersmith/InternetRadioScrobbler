@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Radio Scrobbler</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎵 Personal Radio Scrobbler</h1>
+            <p class="subtitle">Select a station and automatically scrobble to your Last.fm account</p>
+        </header>
+
+        <main>
+            <div class="control-panel">
+                <div class="station-selector">
+                    <label for="station-select">Select Station:</label>
+                    <select id="station-select" disabled>
+                        <option value="">Loading stations...</option>
+                    </select>
+                </div>
+
+                <div class="button-group">
+                    <button id="start-btn" class="btn btn-primary" disabled>Start Scrobbling</button>
+                    <button id="stop-btn" class="btn btn-secondary" disabled>Stop</button>
+                    <button id="emergency-stop-btn" class="btn btn-danger" disabled>Emergency Stop</button>
+                </div>
+            </div>
+
+            <div class="status-panel">
+                <div id="status-indicator" class="status-indicator">
+                    <span class="status-dot inactive"></span>
+                    <span id="status-text">Not scrobbling</span>
+                </div>
+
+                <div id="current-track" class="track-info hidden">
+                    <h3>Currently Playing:</h3>
+                    <div class="track-details">
+                        <span id="track-artist"></span> - <span id="track-title"></span>
+                    </div>
+                </div>
+
+                <div id="last-scrobbled" class="track-info hidden">
+                    <h3>Last Scrobbled:</h3>
+                    <div class="track-details">
+                        <span id="scrobbled-artist"></span> - <span id="scrobbled-title"></span>
+                    </div>
+                </div>
+
+                <div id="error-message" class="error-message hidden"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
