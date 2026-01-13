@@ -33,15 +33,23 @@ logger = logging.getLogger(__name__)
 
 
 # Station fetcher registry
+# For FIP stations, we can use the generic FIPFetcher with different station names
 STATION_FETCHERS = {
     'fip': FIPFetcher,
+    'fipjazz': lambda: FIPFetcher('jazz'),
+    'fiprock': lambda: FIPFetcher('rock'),
+    'fipelectro': lambda: FIPFetcher('electro'),
+    'fippop': lambda: FIPFetcher('pop'),
+    'fipreggae': lambda: FIPFetcher('reggae'),
+    'fipgroove': lambda: FIPFetcher('groove'),
+    'fipmetal': lambda: FIPFetcher('metal'),
+    'fiphiphop': FIPHipHopFetcher,  # Keep legacy name working
     'superfly': SuperflyFetcher,
     'fm4': FM4Fetcher,
     'kbco': KBCOFetcher,
     'wnyc': WNYCFetcher,
     'ness': NessFetcher,
     'radionova': RadioNovaFetcher,
-    'fiphiphop': FIPHipHopFetcher,
 }
 
 
@@ -85,14 +93,19 @@ class RadioScrobbler:
     def _initialize_station(self, config: StationConfig):
         """Initialize a single station."""
         try:
-            # Get fetcher class
-            fetcher_class = STATION_FETCHERS.get(config.name.lower())
-            if not fetcher_class:
+            # Get fetcher class or factory function
+            fetcher_factory = STATION_FETCHERS.get(config.name.lower())
+            if not fetcher_factory:
                 logger.error(f"Unknown station: {config.name}")
                 return
             
-            # Create fetcher
-            fetcher = fetcher_class()
+            # Create fetcher (handle both classes and factory functions)
+            if callable(fetcher_factory) and not isinstance(fetcher_factory, type):
+                # It's a factory function (lambda)
+                fetcher = fetcher_factory()
+            else:
+                # It's a class
+                fetcher = fetcher_factory()
             self.fetchers[config.name] = fetcher
             
             # Create Last.fm client
