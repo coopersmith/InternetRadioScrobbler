@@ -119,71 +119,67 @@ class BaseStationFetcher(ABC):
                     
                     # Find table rows
                     rows = soup.find_all('tr')
+                    live_track = None
+                    most_recent_track = None
+                    
                     for row in rows:
                         cells = row.find_all('td')
-                        if len(cells) >= 2:
-                            first_cell = cells[0].get_text(strip=True)
+                        if len(cells) < 2:
+                            continue
                             
-                            # Check for "Live" row first
-                            if first_cell.lower() == 'live':
-                                # Get the track info from the second cell
-                                track_cell = cells[1]
-                                # Try to find link text or cell text
-                                link = track_cell.find('a')
-                                if link:
-                                    track_text = link.get_text(strip=True)
-                                else:
-                                    track_text = track_cell.get_text(strip=True)
-                                
-                                if ' - ' in track_text:
-                                    parts = track_text.split(' - ', 1)
-                                    artist = parts[0].strip()
-                                    title = parts[1].strip()
-                                    
-                                    # Remove extra info like "| FM4 Musik Podcast"
-                                    if ' | ' in title:
-                                        title = title.split(' | ')[0].strip()
-                                    
-                                    if artist and title:
-                                        self.logger.debug(f"Found Live track via BeautifulSoup: {artist} - {title}")
-                                        return TrackInfo(
-                                            artist=self.normalize_artist(artist),
-                                            title=self.normalize_title(title)
-                                        )
+                        first_cell = cells[0].get_text(strip=True)
+                        track_cell = cells[1]
+                        
+                        # Try to find link text or cell text
+                        link = track_cell.find('a')
+                        if link:
+                            track_text = link.get_text(strip=True)
+                        else:
+                            track_text = track_cell.get_text(strip=True)
+                        
+                        # Skip non-music entries
+                        if any(skip in track_text.lower() for skip in ['www.', 'podcast', 'jingle', 'programmation', 'shop', 'articles', 'empfiehlt', 'verrät', 'ist unser']):
+                            continue
+                        
+                        # Remove extra info like "| FM4 Musik Podcast" or "| FM4 OKFM4"
+                        if ' | ' in track_text:
+                            track_text = track_text.split(' | ')[0].strip()
+                        
+                        if ' - ' not in track_text:
+                            continue
                             
-                            # If no "Live" row, use the first row (most recent track)
-                            # Format: "HH:MM | Artist - Title | Extra info"
-                            elif first_cell and ':' in first_cell and len(first_cell) <= 6:  # Looks like a time
-                                track_cell = cells[1]
-                                link = track_cell.find('a')
-                                if link:
-                                    track_text = link.get_text(strip=True)
-                                else:
-                                    track_text = track_cell.get_text(strip=True)
-                                
-                                # Skip non-music entries (like "www.NessRadio.com" or podcast names)
-                                if any(skip in track_text.lower() for skip in ['www.', 'podcast', 'jingle', 'programmation', 'shop', 'articles']):
-                                    continue
-                                
-                                # Remove extra info like "| FM4 Musik Podcast" or "| FM4 OKFM4"
-                                if ' | ' in track_text:
-                                    track_text = track_text.split(' | ')[0].strip()
-                                
-                                if ' - ' in track_text:
-                                    parts = track_text.split(' - ', 1)
-                                    artist = parts[0].strip()
-                                    title = parts[1].strip()
-                                    
-                                    # Skip if artist or title is too short (likely not a real track)
-                                    if len(artist) < 2 or len(title) < 2:
-                                        continue
-                                    
-                                    if artist and title:
-                                        self.logger.debug(f"Found most recent track via BeautifulSoup: {artist} - {title}")
-                                        return TrackInfo(
-                                            artist=self.normalize_artist(artist),
-                                            title=self.normalize_title(title)
-                                        )
+                        parts = track_text.split(' - ', 1)
+                        artist = parts[0].strip()
+                        title = parts[1].strip()
+                        
+                        # Skip if artist or title is too short (likely not a real track)
+                        if len(artist) < 2 or len(title) < 2:
+                            continue
+                        
+                        track_info = TrackInfo(
+                            artist=self.normalize_artist(artist),
+                            title=self.normalize_title(title)
+                        )
+                        
+                        # Check for "Live" row first
+                        if first_cell.lower() == 'live':
+                            live_track = track_info
+                            self.logger.debug(f"Found Live track via BeautifulSoup: {artist} - {title}")
+                            break  # Live row takes priority
+                        
+                        # Track time-based rows (most recent track)
+                        # Format: "HH:MM | Artist - Title"
+                        elif first_cell and ':' in first_cell and len(first_cell) <= 6:
+                            # Only use first time-based row as most recent
+                            if most_recent_track is None:
+                                most_recent_track = track_info
+                    
+                    # Return Live track if found, otherwise most recent
+                    if live_track:
+                        return live_track
+                    elif most_recent_track:
+                        self.logger.debug(f"Found most recent track via BeautifulSoup: {most_recent_track.artist} - {most_recent_track.title}")
+                        return most_recent_track
                 except ImportError:
                     # BeautifulSoup not available, continue with regex
                     pass
