@@ -161,6 +161,10 @@ class BaseStationFetcher(ABC):
                                 else:
                                     track_text = track_cell.get_text(strip=True)
                                 
+                                # Skip non-music entries (like "www.NessRadio.com" or podcast names)
+                                if any(skip in track_text.lower() for skip in ['www.', 'podcast', 'jingle', 'programmation', 'shop', 'articles']):
+                                    continue
+                                
                                 # Remove extra info like "| FM4 Musik Podcast" or "| FM4 OKFM4"
                                 if ' | ' in track_text:
                                     track_text = track_text.split(' | ')[0].strip()
@@ -169,6 +173,10 @@ class BaseStationFetcher(ABC):
                                     parts = track_text.split(' - ', 1)
                                     artist = parts[0].strip()
                                     title = parts[1].strip()
+                                    
+                                    # Skip if artist or title is too short (likely not a real track)
+                                    if len(artist) < 2 or len(title) < 2:
+                                        continue
                                     
                                     if artist and title:
                                         self.logger.debug(f"Found most recent track via BeautifulSoup: {artist} - {title}")

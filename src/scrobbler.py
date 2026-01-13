@@ -149,6 +149,16 @@ class RadioScrobbler:
                 logger.debug(f"Track unchanged on {station_name}: {current_track}")
                 return True
             
+            # Additional check: if track is very similar (might be slight variation), still scrobble
+            # This helps catch cases where Online Radio Box shows slightly different formatting
+            if last_track:
+                # Normalize for comparison (case-insensitive, strip whitespace)
+                last_normalized = (last_track.artist.lower().strip(), last_track.title.lower().strip())
+                current_normalized = (current_track.artist.lower().strip(), current_track.title.lower().strip())
+                if last_normalized == current_normalized:
+                    logger.debug(f"Track unchanged (normalized) on {station_name}: {current_track}")
+                    return True
+            
             # Scrobble new track
             success = client.scrobble(
                 artist=current_track.artist,
