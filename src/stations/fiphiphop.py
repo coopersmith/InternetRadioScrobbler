@@ -22,12 +22,9 @@ except ImportError:
 class FIPHipHopFetcher(BaseStationFetcher):
     """Fetcher for Radio FIP Hip-Hop."""
     
-    # TODO: Update these URLs once we find the actual API endpoint
-    # Check browser Network tab when loading https://www.radiofrance.fr/fip/radio-hip-hop
+    # API endpoint discovered from browser Network tab
     API_URLS = [
-        # Add discovered API endpoints here
-        # Example format once found:
-        # "https://api.radiofrance.fr/v2/stations/fip-hip-hop/now",
+        "https://www.radiofrance.fr/fip/radio-hip-hop/api/songs",
     ]
     
     def __init__(self):
@@ -76,7 +73,20 @@ class FIPHipHopFetcher(BaseStationFetcher):
     
     def _parse_api_response(self, data: dict) -> Optional[TrackInfo]:
         """Parse Radio France API response."""
-        # Try various possible structures
+        # The API returns a structure with a 'songs' array
+        # The first song in the array is the currently playing track
+        if 'songs' in data and isinstance(data['songs'], list) and len(data['songs']) > 0:
+            current_song = data['songs'][0]
+            artist = current_song.get('firstLine', '').strip()
+            title = current_song.get('secondLine', '').strip()
+            
+            if artist and title:
+                return TrackInfo(
+                    artist=self.normalize_artist(artist),
+                    title=self.normalize_title(title)
+                )
+        
+        # Fallback: Try various other possible structures
         if isinstance(data, list) and len(data) > 0:
             data = data[0]
         
