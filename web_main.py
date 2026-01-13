@@ -108,13 +108,24 @@ def main():
         
         # Initialize personal scrobbler
         lastfm_config = config['lastfm']
+        
+        # Validate required credentials
+        if not lastfm_config.get('username'):
+            raise ValueError("LASTFM_USERNAME environment variable is required")
+        if not lastfm_config.get('api_key'):
+            raise ValueError("LASTFM_API_KEY environment variable is required")
+        if not lastfm_config.get('api_secret'):
+            raise ValueError("LASTFM_API_SECRET environment variable is required")
+        if not lastfm_config.get('password') and not lastfm_config.get('password_hash'):
+            raise ValueError("Either LASTFM_PASSWORD or LASTFM_PASSWORD_HASH environment variable is required")
+        
         scrobbler = PersonalScrobbler(
             lastfm_username=lastfm_config['username'],
             lastfm_api_key=lastfm_config['api_key'],
             lastfm_api_secret=lastfm_config['api_secret'],
             lastfm_password=lastfm_config.get('password'),
             lastfm_password_hash=lastfm_config.get('password_hash'),
-            poll_interval=config['poll_interval']
+            poll_interval=config.get('poll_interval', 30)
         )
         
         # Set global scrobbler instance for Flask routes
@@ -123,9 +134,9 @@ def main():
         
         # Get server config
         # Railway and other platforms use PORT environment variable
-        server_config = config['server']
-        host = server_config.get('host', '0.0.0.0')
-        port = int(os.getenv('PORT', server_config.get('port', 5000)))
+        # Always prioritize PORT env var (Railway sets this automatically)
+        host = os.getenv('HOST', '0.0.0.0')
+        port = int(os.getenv('PORT', config.get('server', {}).get('port', 5000)))
         
         logger.info(f"Starting web server on {host}:{port}")
         logger.info(f"Access the interface at http://localhost:{port}")
@@ -140,7 +151,14 @@ def main():
         signal.signal(signal.SIGTERM, signal_handler)
         
         # Run Flask app
-        app.run(host=host, port=port, debug=False)
+        # Use threaded=True for better performance
+        # Bind to 0.0.0.0 to accept connections from Railway's proxy
+        logger.info(f"Flask app starting on {host}:{port}")
+        try:
+            app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
+        except Exception as e:
+            logger.error(f"Failed to start Flask app: {e}", exc_info=True)
+            raise
         
     except KeyboardInterrupt:
         logger.info("Interrupted by user")
