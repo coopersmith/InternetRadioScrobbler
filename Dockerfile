@@ -15,8 +15,12 @@ COPY src/ ./src/
 COPY main.py .
 COPY web_main.py .
 COPY web_app.py .
+COPY start.sh .
 COPY config/ ./config/
 COPY web/ ./web/
+
+# Make start.sh executable
+RUN chmod +x start.sh
 
 # Create directory for logs
 RUN mkdir -p /app/logs
