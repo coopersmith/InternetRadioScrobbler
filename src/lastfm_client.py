@@ -84,10 +84,16 @@ class LastFMClient:
             return True
             
         except pylast.WSError as e:
-            self.logger.error(f"Last.fm API error: {e}")
+            error_msg = str(e)
+            self.logger.error(f"Last.fm API error: {error_msg}")
+            # Check for common error types
+            if "Invalid API key" in error_msg or "authentication failed" in error_msg.lower():
+                self.logger.error("Check your Last.fm API credentials - authentication failed")
+            elif "Malformed response" in error_msg:
+                self.logger.error("Last.fm API returned malformed response - check credentials and network")
             return False
         except Exception as e:
-            self.logger.error(f"Error scrobbling track: {e}")
+            self.logger.error(f"Error scrobbling track: {e}", exc_info=True)
             return False
     
     def test_connection(self) -> bool:
