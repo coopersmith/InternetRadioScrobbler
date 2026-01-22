@@ -16,6 +16,7 @@ build/
 config/stations.yaml
 config/personal_scrobbler.yaml
 .env
+RAILWAY_ENV_VARS.txt
 
 # Logs
 *.log
