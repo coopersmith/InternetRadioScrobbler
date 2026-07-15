@@ -56,13 +56,19 @@ async function loadStations() {
     }
 }
 
+const STATION_DISPLAY_NAMES = {
+    fip: 'FIP',
+    fm4: 'FM4',
+    ness: 'Ness Radio',
+    radionova: 'Radio Nova',
+};
+
 function formatStationName(station) {
-    // Convert "fipjazz" to "FIP Jazz", "superfly" to "Superfly", etc.
-    return station
-        .replace(/fip/g, 'FIP ')
-        .replace(/([A-Z])/g, ' $1')
-        .replace(/^./, str => str.toUpperCase())
-        .trim();
+    if (STATION_DISPLAY_NAMES[station]) {
+        return STATION_DISPLAY_NAMES[station];
+    }
+    // Fallback: capitalize the first letter.
+    return station.charAt(0).toUpperCase() + station.slice(1);
 }
 
 async function handleStart() {
