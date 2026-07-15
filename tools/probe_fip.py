@@ -1,103 +1,102 @@
 #!/usr/bin/env python3
-"""TEMPORARY diagnostic #2: figure out where FIP thematic now-playing lives.
+"""TEMPORARY diagnostic #3.
 
-Online Radio Box returns 200 for fr/fipjazz but the parser extracts no track,
-so this dumps the actual page internals to see what's there, and checks whether
-Radio France's own page embeds now-playing data (Next.js __NEXT_DATA__).
+FIP: neither onlineradiobox nor recenttracks nor the radiofrance.fr page yield
+thematic now-playing data. Try Radio France's `livemeta` API (the historical
+FIP endpoint, one numeric id per webradio) and map which id is which genre.
 
-Run on a host with open internet. Delete once the FIP fetcher is fixed.
+Superfly: onlineradiobox is stale for it, so scan superfly.fm for a live
+now-playing source.
+
+Run on a host with open internet. Delete once fixed.
 """
 
-import re
+import json
 import requests
 
 UA = "Mozilla/5.0 (compatible; RadioScrobbler/1.0)"
 S = requests.Session()
 S.headers.update({"User-Agent": UA})
 
-
-def dump_onlineradiobox():
-    url = "https://onlineradiobox.com/fr/fipjazz/playlist/?lang=en"
-    print(f"\n########## ONLINE RADIO BOX: {url}")
-    r = S.get(url, timeout=15)
-    print(f"status={r.status_code} length={len(r.text)}")
-    if r.status_code != 200:
-        return
-    from bs4 import BeautifulSoup
-    soup = BeautifulSoup(r.text, "html.parser")
-    tables = soup.find_all("table")
-    print(f"num <table>: {len(tables)}")
-    for ti, table in enumerate(tables[:3]):
-        rows = table.find_all("tr")
-        cls = table.get("class")
-        print(f"\n-- table[{ti}] class={cls} rows={len(rows)}")
-        for ri, row in enumerate(rows[:10]):
-            cells = [c.get_text(" ", strip=True) for c in row.find_all(["td", "th"])]
-            print(f"   row[{ri}] ncells={len(cells)} {cells}")
-    # Also look for any element that screams "now playing"
-    for sel in ["track_history", "now", "player", "current"]:
-        hits = soup.find_all(attrs={"class": re.compile(sel, re.I)})
-        if hits:
-            print(f"\n-- elements with class~='{sel}': {len(hits)}; first text: "
-                  f"{hits[0].get_text(' ', strip=True)[:120]!r}")
+# Historical FIP webradio ids for the livemeta API (guesses to be mapped).
+LIVEMETA_IDS = [7, 64, 65, 66, 69, 70, 71, 74, 77, 78, 95, 98]
+LIVEMETA_HOSTS = [
+    "https://api.radiofrance.fr/livemeta/pull/{id}",
+    "https://www.fip.fr/livemeta/{id}",
+]
 
 
-def dump_superfly():
-    """Superfly returns the same track across many runs -- inspect why.
-
-    Dump the Live row and the first several playlist rows so we can see whether
-    the parser is grabbing a fixed/non-live row or the page itself is stale.
-    """
-    url = "https://onlineradiobox.com/at/983superflyfm/playlist/?lang=en"
-    print(f"\n########## SUPERFLY FRESHNESS: {url}")
-    r = S.get(url, timeout=15)
-    print(f"status={r.status_code} length={len(r.text)}")
-    if r.status_code != 200:
-        return
-    from bs4 import BeautifulSoup
-    soup = BeautifulSoup(r.text, "html.parser")
-    # Find the playlist table (largest by row count) and dump its head.
-    tables = sorted(soup.find_all("table"), key=lambda t: len(t.find_all("tr")), reverse=True)
-    if not tables:
-        print("no tables found")
-        return
-    rows = tables[0].find_all("tr")
-    print(f"playlist table rows={len(rows)}; first 12:")
-    for ri, row in enumerate(rows[:12]):
-        first = row.find(["td", "th"])
-        first_txt = first.get_text(" ", strip=True) if first else ""
-        cells = [c.get_text(" ", strip=True) for c in row.find_all(["td", "th"])]
-        classes = row.get("class")
-        print(f"   row[{ri}] class={classes} first={first_txt!r} cells={cells}")
+def probe_livemeta():
+    print("\n########## RADIO FRANCE LIVEMETA API")
+    for host in LIVEMETA_HOSTS:
+        print(f"\n--- host pattern: {host}")
+        for rid in LIVEMETA_IDS:
+            url = host.format(id=rid)
+            try:
+                r = S.get(url, timeout=12)
+                note = f"status={r.status_code} len={len(r.text)}"
+                song = ""
+                if r.status_code == 200:
+                    try:
+                        data = r.json()
+                        song = summarize_livemeta(data)
+                        note += f" keys={list(data.keys())[:8]}"
+                    except ValueError:
+                        note += " (not json)"
+                print(f"  id={rid:<4} {note}  {song}")
+            except Exception as e:
+                print(f"  id={rid:<4} ERROR {type(e).__name__}: {e}")
 
 
-def scan_radiofrance():
-    url = "https://www.radiofrance.fr/fip/radio-jazz"
-    print(f"\n########## RADIO FRANCE PAGE: {url}")
-    r = S.get(url, timeout=15)
-    print(f"status={r.status_code} length={len(r.text)}")
-    if r.status_code != 200:
-        return
-    html = r.text
-    for marker in ["__NEXT_DATA__", "firstLine", "secondLine", "nowTitle",
-                   "\"now\"", "trackTitle", "\"song\"", "interpreters", "playerData"]:
-        idx = html.find(marker)
-        print(f"\n-- marker {marker!r}: {'FOUND @'+str(idx) if idx>=0 else 'absent'}")
-        if idx >= 0:
-            print("   ..." + " ".join(html[idx:idx + 300].split()))
+def summarize_livemeta(data):
+    """Pull the current song out of a livemeta response, if shaped as expected."""
+    try:
+        steps = data.get("steps") or {}
+        levels = data.get("levels") or []
+        if levels and steps:
+            items = levels[0].get("items", [])
+            pos = levels[0].get("position", len(items) - 1)
+            uid = items[pos] if 0 <= pos < len(items) else items[-1]
+            step = steps.get(uid, {})
+            title = step.get("title") or step.get("titre")
+            author = step.get("authors") or step.get("interpreteMorceau") or step.get("performers")
+            return f">>> NOW: {author} - {title}"
+        # Alternative shapes
+        for k in ("now", "current", "song"):
+            if k in data:
+                return f">>> {k}: " + json.dumps(data[k])[:200]
+    except Exception as e:
+        return f"(parse err {e})"
+    return "(no song parsed) snippet=" + json.dumps(data)[:150]
+
+
+def scan_superfly():
+    print("\n########## SUPERFLY SITE SCAN")
+    for url in ["https://www.superfly.fm/", "https://superfly.fm/"]:
+        print(f"\n--- {url}")
+        try:
+            r = S.get(url, timeout=12)
+            print(f"status={r.status_code} len={len(r.text)}")
+            if r.status_code != 200:
+                continue
+            html = r.text.lower()
+            for marker in ["nowplaying", "now_playing", "now-playing", "currenttrack",
+                           "current-track", "onair", "on-air", "streamabc", "radio.co",
+                           "laut.fm", "creacast", "icecast", "wp-json", "/api/", ".mp3"]:
+                idx = html.find(marker)
+                if idx >= 0:
+                    print(f"  {marker!r} @ {idx}: ..." + " ".join(r.text[idx:idx + 160].split()))
+        except Exception as e:
+            print(f"  ERROR {type(e).__name__}: {e}")
 
 
 if __name__ == "__main__":
     try:
-        dump_onlineradiobox()
+        probe_livemeta()
     except Exception as e:
-        print(f"onlineradiobox probe error: {type(e).__name__}: {e}")
+        print(f"livemeta probe error: {type(e).__name__}: {e}")
     try:
-        dump_superfly()
+        scan_superfly()
     except Exception as e:
-        print(f"superfly probe error: {type(e).__name__}: {e}")
-    try:
-        scan_radiofrance()
-    except Exception as e:
-        print(f"radiofrance probe error: {type(e).__name__}: {e}")
+        print(f"superfly scan error: {type(e).__name__}: {e}")
     print("\nDone.")
