@@ -25,9 +25,6 @@ jobs:
         # The web app's flask stack is not needed here.
         run: pip install pylast requests beautifulsoup4 pyyaml
 
-      - name: Probe FIP page internals (temporary diagnostic)
-        run: python tools/probe_fip.py
-
       - name: Run station health check
         run: |
           {
