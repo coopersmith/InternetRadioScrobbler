@@ -11,7 +11,6 @@ try:
     from .stations.fip import FIPFetcher
     from .stations.superfly import SuperflyFetcher
     from .stations.fm4 import FM4Fetcher
-    from .stations.kbco import KBCOFetcher
     from .stations.wnyc import WNYCFetcher
     from .stations.ness import NessFetcher
     from .stations.radionova import RadioNovaFetcher
@@ -23,7 +22,6 @@ except ImportError:
     from stations.fip import FIPFetcher
     from stations.superfly import SuperflyFetcher
     from stations.fm4 import FM4Fetcher
-    from stations.kbco import KBCOFetcher
     from stations.wnyc import WNYCFetcher
     from stations.ness import NessFetcher
     from stations.radionova import RadioNovaFetcher
@@ -46,7 +44,6 @@ STATION_FETCHERS = {
     'fiphiphop': FIPHipHopFetcher,  # Keep legacy name working
     'superfly': SuperflyFetcher,
     'fm4': FM4Fetcher,
-    'kbco': KBCOFetcher,
     'wnyc': WNYCFetcher,
     'ness': NessFetcher,
     'radionova': RadioNovaFetcher,

@@ -19,7 +19,6 @@ Currently supports:
 - **Radio FIP** (France Inter Paris)
 - **Superfly**
 - **ORF FM4**
-- **KBCO**
 - **WNYC**
 
 More stations can be easily added by creating a new fetcher class.

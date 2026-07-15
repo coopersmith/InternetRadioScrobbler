@@ -28,14 +28,6 @@ stations:
     poll_interval: 30
     enabled: true
     
-  - name: kbco
-    lastfm_username: twikbco
-    lastfm_api_key: YOUR_API_KEY_HERE
-    lastfm_api_secret: YOUR_API_SECRET_HERE
-    lastfm_password_hash: YOUR_PASSWORD_HASH_HERE
-    poll_interval: 30
-    enabled: true
-    
   - name: wnyc
     lastfm_username: twiwnyc
     lastfm_api_key: YOUR_API_KEY_HERE
