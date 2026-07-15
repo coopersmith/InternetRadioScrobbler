@@ -1,0 +1,39 @@
+name: Station health check
+
+# Runs the station fetchers on GitHub's runners (which have open internet)
+# and reports which stations are returning tracks right now. No Last.fm
+# credentials are used — this only tests fetching, never scrobbles.
+
+on:
+  workflow_dispatch: {}        # run on demand from the Actions tab
+  schedule:
+    - cron: "0 * * * *"        # also run hourly
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4 pyyaml
+
+      - name: Run station health check
+        run: |
+          {
+            echo '## Station health check'
+            echo ''
+            echo '```'
+            python check_stations.py; code=$?
+            echo '```'
+            echo ''
+            if [ "$code" -eq 0 ]; then
+              echo '✅ All stations returning tracks.'
+            else
+              echo '⚠️ Some stations are not returning tracks (see table above).'
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
