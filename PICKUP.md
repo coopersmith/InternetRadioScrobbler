@@ -3,20 +3,21 @@
 Working notes for continuing this project in Claude Code. The code lives on
 GitHub, so any session that clones this repo has everything it needs.
 
-## Current status (2026-07-14)
+## Current status (2026-07-15)
 
-- Project was dormant ~6 months; being revived.
-- Architecture is sound: `main.py` -> `src/scrobbler.py` (orchestrator) ->
-  per-station fetchers in `src/stations/` -> `src/lastfm_client.py`.
-- Most fetchers scrape third-party sites, NOT the stations directly:
-  - `onlineradiobox.com` -> Superfly, FM4, KBCO, WNYC, Ness
-  - `recenttracks.com` -> Radio Nova, main FIP
-  - `www.radiofrance.fr` API -> FIP thematic stations + hip-hop
-- Confirmed working in production (per old docs): **Superfly** only.
-- Known broken: **FIP Hip-Hop** (`src/stations/fiphiphop.py`) returns None —
-  its API endpoint was never discovered.
-- KBCO/WNYC "own-API" endpoint guesses (e.g. `/now-playing.json`) are almost
-  certainly dead; they rely on the onlineradiobox fallback.
+- Project revived after ~6 months dormant.
+- Architecture: `main.py` -> `src/scrobbler.py` (orchestrator) -> per-station
+  fetchers in `src/stations/` -> `src/lastfm_client.py`.
+- **Enabled lineup (4, all confirmed fresh & live):** `fip` (main, via Radio
+  France livemeta id 7 + recenttracks fallback), `fm4` and `ness` (Online Radio
+  Box), `radionova` (recenttracks.com).
+- **Everything else is parked** — see `PARKING_LOT.md` for each station, why it
+  was parked, and how to revive it. Summary: FIP thematic webradios return a
+  *stale* livemeta feed; Superfly's Online Radio Box data is laggy; FIP
+  Hip-Hop/Pop have no working source (would need a headless browser); KBCO
+  removed permanently; WNYC parked.
+- Sources in use: `api.radiofrance.fr/livemeta` (FIP), `onlineradiobox.com`
+  (fm4, ness), `recenttracks.com` (radionova, FIP fallback).
 
 ## How to verify which stations actually work
 
@@ -59,9 +60,11 @@ check.
 
 ## Next tasks (punch list)
 
-1. Run `check_stations.py` with network open -> get ground truth per station.
-2. Fix or remove FIP Hip-Hop.
-3. Drop the dead guessed-API endpoints in KBCO/WNYC fetchers.
-4. Add silent-failure logging/alerting so a dead scraper is visible.
-5. Consolidate the ~15 markdown docs; add test coverage beyond
-   `test_superfly.py`.
+Active lineup is healthy. Remaining work is optional / parked:
+
+1. Revive parked stations when a live source is found — see `PARKING_LOT.md`
+   (FIP genre staleness, Superfly live source, FIP Hip-Hop/Pop via headless
+   browser).
+2. Add silent-failure logging/alerting so a dead scraper is visible.
+3. Consolidate the ~15 markdown docs; add test coverage beyond
+   `test_superfly.py` (note: the Superfly fetcher/tests were removed).

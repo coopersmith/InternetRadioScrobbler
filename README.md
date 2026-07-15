@@ -15,10 +15,14 @@ Inspired by the [twifip project](https://github.com/bouil/twifip), this service 
 
 ## Supported Stations
 
-Currently supports:
+Currently enabled (confirmed live):
 - **Radio FIP** (France Inter Paris)
-- **Superfly**
 - **ORF FM4**
+- **Ness Radio**
+- **Radio Nova**
+
+Other stations (FIP thematic webradios, Superfly, etc.) are parked pending a
+reliable live source — see [PARKING_LOT.md](PARKING_LOT.md).
 
 More stations can be easily added by creating a new fetcher class.
 

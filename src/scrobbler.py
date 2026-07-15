@@ -9,7 +9,6 @@ try:
     from .lastfm_client import LastFMClient
     from .stations.base import BaseStationFetcher, TrackInfo
     from .stations.fip import FIPFetcher
-    from .stations.superfly import SuperflyFetcher
     from .stations.fm4 import FM4Fetcher
     from .stations.ness import NessFetcher
     from .stations.radionova import RadioNovaFetcher
@@ -18,7 +17,6 @@ except ImportError:
     from lastfm_client import LastFMClient
     from stations.base import BaseStationFetcher, TrackInfo
     from stations.fip import FIPFetcher
-    from stations.superfly import SuperflyFetcher
     from stations.fm4 import FM4Fetcher
     from stations.ness import NessFetcher
     from stations.radionova import RadioNovaFetcher
@@ -26,19 +24,16 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-# Station fetcher registry
-# For FIP stations, we can use the generic FIPFetcher with different station names
+# Station fetcher registry.
+#
+# Only stations confirmed to return fresh, live now-playing data are enabled.
+# Parked stations (stale or no working source) are documented in PARKING_LOT.md;
+# re-enable one by adding its entry back here once a live source is confirmed.
+# The FIP thematic webradios can be re-added as e.g. lambda: FIPFetcher('jazz')
+# (livemeta ids are recorded in src/stations/fip.py) once their staleness is
+# resolved.
 STATION_FETCHERS = {
     'fip': FIPFetcher,
-    'fipjazz': lambda: FIPFetcher('jazz'),
-    'fiprock': lambda: FIPFetcher('rock'),
-    'fipelectro': lambda: FIPFetcher('electro'),
-    'fippop': lambda: FIPFetcher('pop'),
-    'fipreggae': lambda: FIPFetcher('reggae'),
-    'fipgroove': lambda: FIPFetcher('groove'),
-    'fipmetal': lambda: FIPFetcher('metal'),
-    'fiphiphop': lambda: FIPFetcher('hiphop'),
-    'superfly': SuperflyFetcher,
     'fm4': FM4Fetcher,
     'ness': NessFetcher,
     'radionova': RadioNovaFetcher,
