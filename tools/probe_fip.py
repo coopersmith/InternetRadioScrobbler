@@ -42,6 +42,35 @@ def dump_onlineradiobox():
                   f"{hits[0].get_text(' ', strip=True)[:120]!r}")
 
 
+def dump_superfly():
+    """Superfly returns the same track across many runs -- inspect why.
+
+    Dump the Live row and the first several playlist rows so we can see whether
+    the parser is grabbing a fixed/non-live row or the page itself is stale.
+    """
+    url = "https://onlineradiobox.com/at/983superflyfm/playlist/?lang=en"
+    print(f"\n########## SUPERFLY FRESHNESS: {url}")
+    r = S.get(url, timeout=15)
+    print(f"status={r.status_code} length={len(r.text)}")
+    if r.status_code != 200:
+        return
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(r.text, "html.parser")
+    # Find the playlist table (largest by row count) and dump its head.
+    tables = sorted(soup.find_all("table"), key=lambda t: len(t.find_all("tr")), reverse=True)
+    if not tables:
+        print("no tables found")
+        return
+    rows = tables[0].find_all("tr")
+    print(f"playlist table rows={len(rows)}; first 12:")
+    for ri, row in enumerate(rows[:12]):
+        first = row.find(["td", "th"])
+        first_txt = first.get_text(" ", strip=True) if first else ""
+        cells = [c.get_text(" ", strip=True) for c in row.find_all(["td", "th"])]
+        classes = row.get("class")
+        print(f"   row[{ri}] class={classes} first={first_txt!r} cells={cells}")
+
+
 def scan_radiofrance():
     url = "https://www.radiofrance.fr/fip/radio-jazz"
     print(f"\n########## RADIO FRANCE PAGE: {url}")
@@ -63,6 +92,10 @@ if __name__ == "__main__":
         dump_onlineradiobox()
     except Exception as e:
         print(f"onlineradiobox probe error: {type(e).__name__}: {e}")
+    try:
+        dump_superfly()
+    except Exception as e:
+        print(f"superfly probe error: {type(e).__name__}: {e}")
     try:
         scan_radiofrance()
     except Exception as e:
