@@ -25,6 +25,9 @@ jobs:
         # The web app's flask stack is not needed here.
         run: pip install pylast requests beautifulsoup4 pyyaml
 
+      - name: Sweep livemeta ids for Hip-Hop/Pop (temporary diagnostic)
+        run: python tools/probe_fip.py
+
       - name: Run station health check
         run: |
           {
