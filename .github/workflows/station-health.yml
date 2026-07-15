@@ -20,7 +20,10 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install requests beautifulsoup4 pyyaml
+        # Only the deps the fetcher import chain needs (check_stations.py ->
+        # scrobbler.py -> lastfm_client.py [pylast] + stations [requests, bs4]).
+        # The web app's flask stack is not needed here.
+        run: pip install pylast requests beautifulsoup4 pyyaml
 
       - name: Run station health check
         run: |
