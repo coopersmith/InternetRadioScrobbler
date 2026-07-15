@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""TEMPORARY diagnostic #4: find FIP Hip-Hop (and Pop) on the livemeta API.
+"""TEMPORARY diagnostic #5: read ICY stream metadata for FIP Hip-Hop / Pop.
 
-The classic FIP webradios use ids 7,64,65,66,69,70,71,74,77. Hip-Hop and Pop
-are newer and weren't in that range, so sweep a broad id range and print the
-current song + stationId for every id that returns 200, so we can spot the
-rap/hip-hop station (and pop).
+Hip-Hop and Pop aren't on the livemeta API. But every FIP webradio streams
+from Radio France's Icecast, and the stream carries the current track in its
+ICY metadata (StreamTitle='Artist - Title'). This probes candidate stream URLs
+and prints the StreamTitle so we can wire Hip-Hop and Pop to their streams.
 
 Run on a host with open internet. Delete once fixed.
 """
@@ -12,52 +12,54 @@ Run on a host with open internet. Delete once fixed.
 import requests
 
 UA = "Mozilla/5.0 (compatible; RadioScrobbler/1.0)"
-S = requests.Session()
-S.headers.update({"User-Agent": UA})
 
-KNOWN = {7: "fip", 64: "rock", 65: "jazz", 66: "groove", 69: "monde",
-         70: "nouveautes", 71: "reggae", 74: "electro", 77: "metal"}
+# Candidate Icecast stream URLs (slug variants x quality/format).
+SLUGS = {
+    "fip (reference)": ["fip"],
+    "hiphop": ["fiphiphop", "fip_hiphop", "fip-hiphop", "fiphip-hop"],
+    "pop": ["fippop", "fip_pop", "fip-pop"],
+    "jazz (reference)": ["fipjazz"],
+}
+FORMATS = ["midfi.mp3", "hifi.aac", "lofi.mp3"]
+HOST = "https://icecast.radiofrance.fr/{slug}-{fmt}"
 
 
-def current_song(data):
+def read_icy_title(url):
+    """Open the stream, read one ICY metadata block, return StreamTitle."""
+    headers = {"User-Agent": UA, "Icy-MetaData": "1"}
+    r = requests.get(url, headers=headers, stream=True, timeout=15)
     try:
-        steps = data.get("steps") or {}
-        levels = data.get("levels") or []
-        if not (steps and levels):
-            return "(no steps/levels)"
-        level = levels[0]
-        items = level.get("items") or []
-        pos = level.get("position")
-        if pos is None or not (0 <= pos < len(items)):
-            pos = len(items) - 1
-        step = steps.get(items[pos], {})
-        title = step.get("title") or step.get("titre")
-        artist = (step.get("authors") or step.get("interpreteMorceau")
-                  or step.get("performers"))
-        return f"{artist} - {title}"
-    except Exception as e:
-        return f"(parse err {e})"
+        if r.status_code != 200:
+            return f"status={r.status_code}"
+        metaint = r.headers.get("icy-metaint")
+        if not metaint:
+            return f"200 but no icy-metaint (headers: {list(r.headers.keys())})"
+        metaint = int(metaint)
+        raw = r.raw
+        raw.read(metaint)  # skip audio payload
+        length_byte = raw.read(1)
+        if not length_byte:
+            return "no metadata length byte"
+        meta_len = length_byte[0] * 16
+        if meta_len == 0:
+            return "(empty metadata this block; retry)"
+        meta = raw.read(meta_len).decode("utf-8", errors="replace")
+        return meta.strip("\x00").strip()
+    finally:
+        r.close()
 
 
 if __name__ == "__main__":
-    print("Sweeping livemeta ids for Hip-Hop / Pop\n")
-    hits = []
-    for rid in range(1, 141):
-        url = f"https://api.radiofrance.fr/livemeta/pull/{rid}"
-        try:
-            r = S.get(url, timeout=8)
-            if r.status_code != 200:
-                continue
-            data = r.json()
-            sid = data.get("stationId")
-            song = current_song(data)
-            tag = KNOWN.get(rid, "?")
-            print(f"id={rid:<4} stationId={sid}  [{tag}]  NOW: {song}")
-            hits.append(rid)
-        except ValueError:
-            print(f"id={rid:<4} 200 but not JSON")
-        except Exception:
-            pass
-    print(f"\n{len(hits)} live ids found: {hits}")
-    print("Look for a rap/hip-hop artist above -> that id is FIP Hip-Hop.")
+    print("Probing FIP Icecast stream metadata\n")
+    for label, slugs in SLUGS.items():
+        print(f"### {label}")
+        for slug in slugs:
+            for fmt in FORMATS:
+                url = HOST.format(slug=slug, fmt=fmt)
+                try:
+                    result = read_icy_title(url)
+                    print(f"  {url}\n      -> {result}")
+                except Exception as e:
+                    print(f"  {url}\n      -> ERROR {type(e).__name__}: {e}")
+        print()
     print("Done.")
