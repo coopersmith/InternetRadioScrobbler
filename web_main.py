@@ -119,13 +119,33 @@ def main():
         if not lastfm_config.get('password') and not lastfm_config.get('password_hash'):
             raise ValueError("Either LASTFM_PASSWORD or LASTFM_PASSWORD_HASH environment variable is required")
         
+        # Nightly kill switch: auto-stop scrobbling at this hour (default 2 AM
+        # US Eastern). Set NIGHTLY_STOP_HOUR_ET to another hour, or to
+        # off/none/disabled/empty to turn it off.
+        nightly_raw = os.getenv('NIGHTLY_STOP_HOUR_ET', '2').strip().lower()
+        if nightly_raw in ('', 'off', 'none', 'disabled', 'false'):
+            nightly_stop_hour = None
+        else:
+            try:
+                nightly_stop_hour = int(nightly_raw)
+                if not 0 <= nightly_stop_hour <= 23:
+                    raise ValueError
+            except ValueError:
+                logger.warning(
+                    f"Invalid NIGHTLY_STOP_HOUR_ET={nightly_raw!r}; using default 2 AM ET"
+                )
+                nightly_stop_hour = 2
+        if nightly_stop_hour is not None:
+            logger.info(f"Nightly auto-stop enabled at {nightly_stop_hour:02d}:00 America/New_York")
+
         scrobbler = PersonalScrobbler(
             lastfm_username=lastfm_config['username'],
             lastfm_api_key=lastfm_config['api_key'],
             lastfm_api_secret=lastfm_config['api_secret'],
             lastfm_password=lastfm_config.get('password'),
             lastfm_password_hash=lastfm_config.get('password_hash'),
-            poll_interval=config.get('poll_interval', 30)
+            poll_interval=config.get('poll_interval', 30),
+            nightly_stop_hour=nightly_stop_hour,
         )
         
         # Set global scrobbler instance for Flask routes

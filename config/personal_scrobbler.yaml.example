@@ -13,6 +13,13 @@ lastfm:
 # Polling interval in seconds (how often to check for new tracks)
 poll_interval: 30
 
+# Nightly kill switch (safety net for sessions left running unattended):
+# scrobbling automatically stops each night at this hour, US Eastern time.
+# Configured via the NIGHTLY_STOP_HOUR_ET environment variable:
+#   NIGHTLY_STOP_HOUR_ET=2     -> stop at 2 AM ET (default)
+#   NIGHTLY_STOP_HOUR_ET=off   -> disable the nightly stop
+# It fires once per night; you can manually restart afterward.
+
 # Web server configuration
 server:
   host: "0.0.0.0"  # Listen on all interfaces
