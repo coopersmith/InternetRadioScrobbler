@@ -39,10 +39,12 @@ class PersonalScrobbler:
                  lastfm_password_hash: Optional[str] = None,
                  poll_interval: int = 30,
                  max_consecutive_errors: int = 5,
-                 auto_stop_on_errors: bool = True):
+                 auto_stop_on_errors: bool = True,
+                 nightly_stop_hour: Optional[int] = 2,
+                 nightly_stop_tz: str = "America/New_York"):
         """
         Initialize personal scrobbler.
-        
+
         Args:
             lastfm_username: User's Last.fm username
             lastfm_api_key: Last.fm API key
@@ -52,6 +54,12 @@ class PersonalScrobbler:
             poll_interval: Seconds between polling attempts
             max_consecutive_errors: Auto-stop after this many consecutive errors
             auto_stop_on_errors: Whether to auto-stop on repeated errors
+            nightly_stop_hour: Hour (0-23) in nightly_stop_tz at which to
+                automatically stop scrobbling each night. Set to None to
+                disable. Defaults to 2 (2 AM). This is a safety net for when
+                scrobbling is left running unattended overnight.
+            nightly_stop_tz: IANA timezone name for nightly_stop_hour
+                (default "America/New_York", i.e. US Eastern with DST).
         """
         self.lastfm_client = LastFMClient(
             username=lastfm_username,
@@ -64,6 +72,11 @@ class PersonalScrobbler:
         self.poll_interval = poll_interval
         self.max_consecutive_errors = max_consecutive_errors
         self.auto_stop_on_errors = auto_stop_on_errors
+        self.nightly_stop_hour = nightly_stop_hour
+        self.nightly_stop_tz = nightly_stop_tz
+        # ET date on which the nightly stop last fired, so it only fires once
+        # per night and the user can restart afterward.
+        self._last_nightly_stop_date = None
         self._active_station: Optional[str] = None
         self._fetcher: Optional[BaseStationFetcher] = None
         self._last_track: Optional[TrackInfo] = None
@@ -116,7 +129,15 @@ class PersonalScrobbler:
                     station_name=station_name,
                     error=None
                 )
-                
+
+                # Arm the nightly auto-stop: if today's cutoff hour has already
+                # passed at start time, don't fire until tomorrow's cutoff.
+                self._last_nightly_stop_date = None
+                if self.nightly_stop_hour is not None:
+                    now_et = self._now_in_stop_tz()
+                    if now_et is not None and now_et.hour >= self.nightly_stop_hour:
+                        self._last_nightly_stop_date = now_et.date()
+
                 # Start background thread
                 self._stop_event.clear()
                 self._thread = threading.Thread(target=self._poll_loop, daemon=True)
@@ -165,11 +186,63 @@ class PersonalScrobbler:
                 error=self._status.error
             )
     
+    def _now_in_stop_tz(self):
+        """Current datetime in the nightly-stop timezone, or None if unavailable."""
+        from datetime import datetime
+        try:
+            from zoneinfo import ZoneInfo
+            return datetime.now(ZoneInfo(self.nightly_stop_tz))
+        except Exception as e:
+            logger.warning(
+                f"Could not resolve timezone '{self.nightly_stop_tz}' "
+                f"({e}); nightly auto-stop disabled"
+            )
+            return None
+
+    def _should_nightly_stop(self) -> bool:
+        """Return True once per day once the clock has reached the nightly stop hour.
+
+        Uses ">=" rather than "==" so the stop still fires if a poll lands after
+        the cutoff hour has passed -- e.g. on the spring-forward DST night, when
+        the 2 AM hour does not exist in America/New_York and the clock jumps
+        from 01:59 to 03:00. start() arms _last_nightly_stop_date when
+        scrobbling begins after the cutoff, so this never fires immediately on
+        a fresh start.
+        """
+        if self.nightly_stop_hour is None:
+            return False
+        now = self._now_in_stop_tz()
+        if now is None:
+            return False
+        if now.hour >= self.nightly_stop_hour and self._last_nightly_stop_date != now.date():
+            self._last_nightly_stop_date = now.date()
+            return True
+        return False
+
     def _poll_loop(self):
         """Background polling loop."""
         logger.info(f"Polling loop started for {self._active_station}")
-        
+
         while not self._stop_event.is_set():
+            # Nightly kill switch: stop scrobbling at the configured hour so a
+            # session left running unattended doesn't scrobble all night.
+            if self._should_nightly_stop():
+                logger.info(
+                    f"Nightly auto-stop triggered "
+                    f"({self.nightly_stop_hour:02d}:00 {self.nightly_stop_tz})"
+                )
+                self._stop_event.set()
+                with self._lock:
+                    self._status.is_active = False
+                    self._active_station = None
+                    self._fetcher = None
+                    self._consecutive_errors = 0
+                    self._status.error = (
+                        f"Auto-stopped at {self.nightly_stop_hour:02d}:00 "
+                        f"({self.nightly_stop_tz}) - nightly kill switch"
+                    )
+                break
+
             try:
                 # Fetch current track
                 current_track = self._fetcher.get_current_track()
