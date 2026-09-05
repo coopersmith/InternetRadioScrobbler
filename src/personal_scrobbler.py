@@ -200,13 +200,21 @@ class PersonalScrobbler:
             return None
 
     def _should_nightly_stop(self) -> bool:
-        """Return True once per day when the clock reaches the nightly stop hour."""
+        """Return True once per day once the clock has reached the nightly stop hour.
+
+        Uses ">=" rather than "==" so the stop still fires if a poll lands after
+        the cutoff hour has passed -- e.g. on the spring-forward DST night, when
+        the 2 AM hour does not exist in America/New_York and the clock jumps
+        from 01:59 to 03:00. start() arms _last_nightly_stop_date when
+        scrobbling begins after the cutoff, so this never fires immediately on
+        a fresh start.
+        """
         if self.nightly_stop_hour is None:
             return False
         now = self._now_in_stop_tz()
         if now is None:
             return False
-        if now.hour == self.nightly_stop_hour and self._last_nightly_stop_date != now.date():
+        if now.hour >= self.nightly_stop_hour and self._last_nightly_stop_date != now.date():
             self._last_nightly_stop_date = now.date()
             return True
         return False

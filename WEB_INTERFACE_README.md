@@ -40,6 +40,7 @@ Open your browser to: http://localhost:5000
 - **Simple Interface**: Select a station and click "Start Scrobbling"
 - **Real-time Status**: See what track is currently playing and what was last scrobbled
 - **Automatic Updates**: When new stations are added to the Railway system, they automatically appear here
+- **Nightly Kill Switch**: Scrobbling stops itself once per night at 2 AM US Eastern (DST-aware) so a session left running unattended doesn't scrobble all night. You can restart afterward. See `NIGHTLY_STOP_HOUR_ET` below.
 
 ## How It Works
 
@@ -74,6 +75,25 @@ lastfm:
   username: "${LASTFM_USERNAME}"
   api_key: "${LASTFM_API_KEY}"
   # etc.
+```
+
+The nightly kill switch is controlled by `NIGHTLY_STOP_HOUR_ET` (set it in the
+Railway service's Variables for the web service, or export it locally):
+
+```bash
+NIGHTLY_STOP_HOUR_ET=2     # stop at 2 AM Eastern (default when unset)
+NIGHTLY_STOP_HOUR_ET=5     # stop at 5 AM Eastern instead
+NIGHTLY_STOP_HOUR_ET=off   # disable the nightly stop
+```
+
+When it fires, the status panel shows "Auto-stopped at 02:00 (America/New_York) -
+nightly kill switch" and the log line "Nightly auto-stop triggered". Starting
+scrobbling after the cutoff hour runs until the *next* night's cutoff.
+
+Tests for this behaviour (no network needed):
+
+```bash
+python -m unittest tests.test_nightly_stop -v
 ```
 
 ## Deployment
